@@ -19,6 +19,7 @@ class PanopticDataset(Dataset):
         """
         self.root_dir = root_dir
         self.split = split
+        self.transform = transform
         # Load json file containing information about the dataset
         path_file = os.path.join(self.root_dir, path_json)
         data = json.load(open(path_file))
@@ -70,18 +71,40 @@ class PanopticDataset(Dataset):
                                   img_data['labelfile_name'])
         panoptic = np.asarray(Image.open(path_label))
         panoptic = rgb2id(panoptic)
-        
-        # Create semantic segmentation target
-        semantic = np.zeros_like(panoptic)
-        instance_mask = []
+
+        # Get bbox info
         rpn_bbox = []
+        class_bbox = []
+        for seg in img_data['segments_info']:
+            seg_category = self.class_mapper[seg['category_id']]
+            if seg_category['isthing']:
+                rpn_bbox.append(seg["bbox"])
+                class_bbox.append(seg_category['train_id'])
+
+        # Apply augmentation with albumentations
+        if self.transform is not None:
+            transformed = self.transform(
+                image=image,
+                mask=panoptic,
+                bboxes=rpn_bbox,
+                class_labels=class_bbox
+            )
+            image = transformed['image']
+            panoptic = transformed['mask']
+            rpn_bbox = transformed['bboxes']
+            class_bbox = transformed['class_labels']
+        
+        # Create semantic segmentation target with augmented data
+        semantic = np.zeros_like(panoptic)
         rpn_mask = np.zeros_like(panoptic)
+        instance_mask = []
+
         for seg in img_data['segments_info']:
             # if seg['iscrowd']:
                 #TODO
             seg_category = self.class_mapper[seg['category_id']]
             semantic[panoptic == seg["id"]] = seg_category['train_id']
-            # If segmentation is an rpn generate a mask for maskrcnn target
+            # If segmentation is a thing generate a mask for maskrcnn target
             # Collect information for RPN targets
             if seg_category['isthing']:
                 mask = np.zeros_like(panoptic)
@@ -89,14 +112,16 @@ class PanopticDataset(Dataset):
                 instance_mask.append(mask)
                 # RPN targets
                 rpn_mask[panoptic == seg["id"]] = 1
-                rpn_bbox.append(seg["bbox"])
-            
+        
+        # Create same size of bbox and mask instance
+        #TODO if batch_size > 1
+
         return {
-            'image': image,
-            'semantic': semantic,
-            'instance_mask': np.stack([*instance_mask]),
-            'rpn_mask': rpn_mask,
-            'rpn_bbox': np.stack([*rpn_bbox])
+            'image': torch.from_numpy(np.array(image)),
+            'semantic': torch.from_numpy(semantic),
+            'instance_mask': torch.from_numpy(np.stack([*instance_mask])),
+            'rpn_mask': torch.from_numpy(rpn_mask),
+            'rpn_bbox': torch.from_numpy(np.stack([*rpn_bbox]))
         }
 
 
