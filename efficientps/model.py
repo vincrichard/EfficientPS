@@ -1,12 +1,45 @@
 import torch
 import torch.nn as nn
+from .fpn import TwoWayFpn
+import pytorch_lightning as pl
+from .backbone import generate_backbone_EfficientPS, output_feature_size
 
-class EffificientPS(nn.Module):
 
-    def __init__(self):
+class EffificientPS(pl.LightningModule):
+
+    def __init__(self, id_efficient_net):
+        super().__init__()
+        self.backbone = generate_backbone_EfficientPS('5')
+        self.fpn = TwoWayFpn(output_feature_size[id_efficient_net])
+
+    def forward(self, x):
+        # in lightning, forward defines the prediction/inference actions
+        features = self.backbone.extract_endpoints(x)
+        pyramid_features = self.fpn(features)
+        return features
+
+    def training_step(self, batch, batch_idx):
+        # training_step defined the train loop.
+        # It is independent of forward
+        
+
+        loss = 0
+        # Logging to TensorBoard by default
+        self.log('train_loss', loss)
+        return loss
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        return optimizer
+
+"""
+
+# class EffificientPS(nn.Module):
+
+#     def __init__(self):
 
     
-    def forward(self):
+#     def forward(self):
 
         # 1 - Apply backbone efficient det
         # input original image
@@ -141,3 +174,4 @@ class EffificientPS(nn.Module):
         #     mrcnn_mask = mrcnn_mask.unsqueeze(0)
 
         #     return [detections, mrcnn_mask]
+"""
