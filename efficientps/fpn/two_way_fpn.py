@@ -73,7 +73,7 @@ class TwoWayFpn(nn.Module):
             kernel_size=3, padding=1)
         self.iabn_out_x32 = InPlaceABN(256)
         
-    def forward(self, infeatures):
+    def forward(self, inputs):
         outputs = dict()
 
         #################################
@@ -81,21 +81,21 @@ class TwoWayFpn(nn.Module):
         #################################
         # x4 size
         # [B, C, x4W, x4H]
-        b_up_x4 = infeatures['reduction_2']
+        b_up_x4 = inputs['reduction_2']
         # [B, C, x4W, x4H] -> [B, 256, x4W, x4H]
         b_up_x4 = self.conv_b_up_x4(b_up_x4)
         b_up_x4 = self.iabn_b_up_x4(b_up_x4)
         # [B, 256, x4W, x4H] -> [B, 256, x8W, x8H]
         b_up_x4_to_merge = F.interpolate(
             b_up_x4,
-            size=(infeatures['reduction_3'].shape[2], 
-                  infeatures['reduction_3'].shape[3]),
+            size=(inputs['reduction_3'].shape[2], 
+                  inputs['reduction_3'].shape[3]),
             mode='bilinear'
         )
 
         # x8 size
         # [B, C, x8W, x8H]
-        b_up_x8 = infeatures['reduction_3']
+        b_up_x8 = inputs['reduction_3']
         # [B, C, x8W, x8H] -> [B, 256, x8W, x8H]
         b_up_x8 = self.conv_b_up_x8(b_up_x8)
         b_up_x8 = self.iabn_b_up_x8(b_up_x8)
@@ -103,14 +103,14 @@ class TwoWayFpn(nn.Module):
         # [B, 256, x8W, x8H] -> [B, 256, x16W, x16H]
         b_up_x8_to_merge = F.interpolate(
             b_up_x8,
-            size=(infeatures['reduction_4'].shape[2], 
-                  infeatures['reduction_4'].shape[3]),
+            size=(inputs['reduction_4'].shape[2], 
+                  inputs['reduction_4'].shape[3]),
             mode='bilinear'
         )
 
         #x16 size (reduction_4 since we don't need block 4)
         # [B, C, x16W, x16H]
-        b_up_x16 = infeatures['reduction_4']
+        b_up_x16 = inputs['reduction_4']
         # [B, C, x16W, x16H] -> [B, 256, x16W, x16H]
         b_up_x16 = self.conv_b_up_x16(b_up_x16)
         b_up_x16 = self.iabn_b_up_x16(b_up_x16)
@@ -118,14 +118,14 @@ class TwoWayFpn(nn.Module):
         # [B, 256, x16W, x16H] -> [B, 256, x32W, x32H]
         b_up_x16_to_merge = F.interpolate(
             b_up_x16,
-            size=(infeatures['reduction_5'].shape[2],
-                  infeatures['reduction_5'].shape[3]),
+            size=(inputs['reduction_5'].shape[2],
+                  inputs['reduction_5'].shape[3]),
             mode='bilinear'
         )
 
         #x32 size
         # [B, C, x32W, x32H]
-        b_up_x32 = infeatures['reduction_5']
+        b_up_x32 = inputs['reduction_5']
         # [B, C, x32W, x32H] -> [B, 256, x32W, x32H]
         b_up_x32 = self.conv_b_up_x32(b_up_x32)
         b_up_x32 = self.iabn_b_up_x32(b_up_x32)
@@ -137,26 +137,26 @@ class TwoWayFpn(nn.Module):
 
         # x32 size
         # [B, C, x32W, x32H]
-        t_dn_x32 = infeatures['reduction_5']
+        t_dn_x32 = inputs['reduction_5']
         # [B, C, x32W, x32H] -> [B, 256, x32W, x32H]
         t_dn_x32 = self.conv_t_dn_x32(t_dn_x32)
         t_dn_x32 = self.iabn_t_dn_x32(t_dn_x32)
         # [B, 256, x32W, x32H] -> [B, 256, x16W, x16H]
         t_dn_x32_to_merge = F.interpolate(
             t_dn_x32,
-            size=(infeatures['reduction_4'].shape[2],
-                  infeatures['reduction_4'].shape[3]),
+            size=(inputs['reduction_4'].shape[2],
+                  inputs['reduction_4'].shape[3]),
             mode='bilinear'
         )
         # Create output
         p_32 = torch.add(t_dn_x32, b_up_x32)
         p_32 = self.depth_wise_conv_x32(p_32)
         p_32 = self.iabn_out_x32(p_32)
-        outputs['P_32'] = p_32
+        # outputs['P_32'] = p_32
 
         # x16 size
         # [B, C, x16W, x16H]
-        t_dn_x16 = infeatures['reduction_4']
+        t_dn_x16 = inputs['reduction_4']
         # [B, C, x16W, x16H] -> [B, 256, x16W, x16H]
         t_dn_x16 = self.conv_t_dn_x16(t_dn_x16)
         t_dn_x16 = self.iabn_t_dn_x16(t_dn_x16)
@@ -164,19 +164,19 @@ class TwoWayFpn(nn.Module):
         # [B, 256, x16W, x16H] -> [B, 256, x32W, x32H]
         t_dn_x16_to_merge =  F.interpolate(
             t_dn_x16,
-            size=(infeatures['reduction_3'].shape[2],
-                  infeatures['reduction_3'].shape[3]),
+            size=(inputs['reduction_3'].shape[2],
+                  inputs['reduction_3'].shape[3]),
             mode='bilinear'
         )
         # Create output
         p_16 = torch.add(t_dn_x16, b_up_x16)
         p_16 = self.depth_wise_conv_x16(p_16)
         p_16 = self.iabn_out_x16(p_16)
-        outputs['P_16'] = p_16
+        # outputs['P_16'] = p_16
 
         # x8 size
         # [B, C, x8W, x8H]
-        t_dn_x8 = infeatures['reduction_3']
+        t_dn_x8 = inputs['reduction_3']
         # [B, C, x8W, x8H] -> [B, 256, x8W, x8H]
         t_dn_x8 = self.conv_t_dn_x8(t_dn_x8)
         t_dn_x8 = self.iabn_t_dn_x8(t_dn_x8)
@@ -184,19 +184,19 @@ class TwoWayFpn(nn.Module):
         # [B, 256, x8W, x8H] -> [B, 256, x4W, x4H]
         t_dn_x8_to_merge = F.interpolate(
             t_dn_x8,
-            size=(infeatures['reduction_2'].shape[2],
-                  infeatures['reduction_2'].shape[3]),
+            size=(inputs['reduction_2'].shape[2],
+                  inputs['reduction_2'].shape[3]),
             mode='bilinear'
         )
         # Create output
         p_8 = torch.add(t_dn_x8, b_up_x8)
         p_8 = self.depth_wise_conv_x8(p_8)
         p_8 = self.iabn_out_x8(p_8)
-        outputs['P_8'] = p_8
+        # outputs['P_8'] = p_8
 
         # x4 size
         # [B, C, x4W, x4H]
-        t_dn_x4 = infeatures['reduction_2']
+        t_dn_x4 = inputs['reduction_2']
         # [B, C, x4W, x4H] -> [B, 256, x4W, x4H]
         t_dn_x4 = self.conv_t_dn_x4(t_dn_x4)
         t_dn_x4 = self.iabn_t_dn_x4(t_dn_x4)
@@ -206,6 +206,11 @@ class TwoWayFpn(nn.Module):
         p_4 = torch.add(t_dn_x4, b_up_x4)
         p_4 = self.depth_wise_conv_x4(p_4)
         p_4 = self.iabn_out_x4(p_4)
-        outputs['P_4'] = p_4
+        # outputs['P_4'] = p_4
 
-        return outputs
+        return {
+            'P_4': p_4,
+            'P_8': p_8,
+            'P_16': p_16,
+            'P_32': p_32
+        }
