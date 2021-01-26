@@ -3,30 +3,40 @@ import torch.nn as nn
 from .fpn import TwoWayFpn
 import pytorch_lightning as pl
 from .backbone import generate_backbone_EfficientPS, output_feature_size
+from .semantic_head import SemanticHead
+from .instance_head import InstanceHead
 
 
 class EffificientPS(pl.LightningModule):
 
-    def __init__(self, id_efficient_net):
-        super().__init__()
-        self.backbone = generate_backbone_EfficientPS('5')
-        self.fpn = TwoWayFpn(output_feature_size[id_efficient_net])
+    def __init__(self, cfg):
+        super().__init__() 
+        self.backbone = generate_backbone_EfficientPS(cfg.EFFICIENTNET_ID)
+        self.fpn = TwoWayFpn(output_feature_size[cfg.EFFICIENTNET_ID])
+        self.semantic_head = SemanticHead(cfg.NUM_CLASS)
+        self.instance_head = InstanceHead(cfg)
 
     def forward(self, x):
         # in lightning, forward defines the prediction/inference actions
-        features = self.backbone.extract_endpoints(x)
+        features = self.backbone.extract_endpoints(x['image'])
         pyramid_features = self.fpn(features)
-        return features
+        # semantic_logits = self.semantic_head(pyramid_features)
+        loss = self.instance_head(pyramid_features, x['rpn_bbox'])
+        return {'loss': loss}
 
     def training_step(self, batch, batch_idx):
         # training_step defined the train loop.
         # It is independent of forward
-        
+        features = self.backbone.extract_endpoints(batch['image'])
+        pyramid_features = self.fpn(features)
+        # semantic_logits = self.semantic_head(pyramid_features)
+        loss = self.instance_head(pyramid_features, batch['instance'])
+        return {'loss': sum(loss.values())}
 
-        loss = 0
-        # Logging to TensorBoard by default
-        self.log('train_loss', loss)
-        return loss
+        # loss = 0
+        # # Logging to TensorBoard by default
+        # self.log('train_loss', loss)
+        # return loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
