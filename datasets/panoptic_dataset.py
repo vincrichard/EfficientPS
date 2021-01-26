@@ -5,6 +5,8 @@ import numpy as np
 from PIL import Image
 from torchvision import transforms, utils
 from torch.utils.data import Dataset, DataLoader
+import torchvision.transforms.functional as F
+from detectron2.structures import Instances, BitMasks, Boxes
 
 class PanopticDataset(Dataset):
     """A dataset for Panotic task"""
@@ -94,10 +96,14 @@ class PanopticDataset(Dataset):
             rpn_bbox = transformed['bboxes']
             class_bbox = transformed['class_labels']
         
+        # Create instance class for detectron (Mask RCNN Head)
+        instance = Instances(panoptic.shape)
+
         # Create semantic segmentation target with augmented data
         semantic = np.zeros_like(panoptic)
         rpn_mask = np.zeros_like(panoptic)
         instance_mask = []
+        instance_cls = []
 
         for seg in img_data['segments_info']:
             # if seg['iscrowd']:
@@ -108,20 +114,28 @@ class PanopticDataset(Dataset):
             # Collect information for RPN targets
             if seg_category['isthing']:
                 mask = np.zeros_like(panoptic)
-                mask[panoptic == seg["id"]] = seg_category['train_id']
+                mask[panoptic == seg["id"]] = 1 #seg_category['train_id']
+                instance_cls.append(seg_category['train_id'])
                 instance_mask.append(mask)
                 # RPN targets
                 rpn_mask[panoptic == seg["id"]] = 1
         
         # Create same size of bbox and mask instance
         #TODO if batch_size > 1
+        rpn_bbox = coco_to_pascal_bbox(np.stack([*rpn_bbox]))
+
+        instance.gt_masks = BitMasks(instance_mask)
+        instance.gt_classes = torch.as_tensor(instance_cls)
+        instance.gt_boxes = Boxes(rpn_bbox)
 
         return {
-            'image': torch.from_numpy(np.array(image)),
-            'semantic': torch.from_numpy(semantic),
-            'instance_mask': torch.from_numpy(np.stack([*instance_mask])),
-            'rpn_mask': torch.from_numpy(rpn_mask),
-            'rpn_bbox': torch.from_numpy(np.stack([*rpn_bbox]))
+            'image': np.array(image),
+            'semantic': semantic,
+            # 'instance_mask': torch.as_tensor(np.stack([*instance_mask])),
+            # 'rpn_mask': torch.as_tensor(rpn_mask),
+            # # xmin, ymin, xmax, ymax
+            # 'rpn_bbox': rpn_bbox,
+            'instance': instance
         }
 
 
@@ -136,3 +150,14 @@ def rgb2id(color):
     return int(color[0] + 256 * color[1] + 256 * 256 * color[2])
 
 
+def coco_to_pascal_bbox(bbox):
+    return np.stack((bbox[:,0], bbox[:,1], 
+            bbox[:,0]+bbox[:,2], bbox[:,1]+bbox[:,3]), axis=1)
+
+
+def collate_fn(inputs):
+    return {
+        'image': torch.stack([F.to_tensor(i['image']) for i in inputs]),
+        'semantic': torch.as_tensor([i['semantic'] for i in inputs]),
+        'instance': [i['instance'] for i in inputs]
+    }
