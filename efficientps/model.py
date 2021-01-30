@@ -5,12 +5,16 @@ import pytorch_lightning as pl
 from .backbone import generate_backbone_EfficientPS, output_feature_size
 from .semantic_head import SemanticHead
 from .instance_head import InstanceHead
+from .panoptic_segmentation_module import panoptic_segmentation_module
+from .panoptic_metrics import create_output_file, save_json_file, GT_JSON, PRED_JSON
+from panopticapi.evaluation import pq_compute
+
 
 
 class EffificientPS(pl.LightningModule):
 
     def __init__(self, cfg):
-        super().__init__() 
+        super().__init__()
         self.backbone = generate_backbone_EfficientPS(cfg.EFFICIENTNET_ID)
         self.fpn = TwoWayFpn(output_feature_size[cfg.EFFICIENTNET_ID])
         self.semantic_head = SemanticHead(cfg.NUM_CLASS)
@@ -18,25 +22,69 @@ class EffificientPS(pl.LightningModule):
 
     def forward(self, x):
         # in lightning, forward defines the prediction/inference actions
-        features = self.backbone.extract_endpoints(x['image'])
-        pyramid_features = self.fpn(features)
-        # semantic_logits = self.semantic_head(pyramid_features)
-        loss = self.instance_head(pyramid_features, x['rpn_bbox'])
-        return {'loss': loss}
+        predictions, _ = self.shared_step(x)
+        return predictions
 
     def training_step(self, batch, batch_idx):
         # training_step defined the train loop.
         # It is independent of forward
-        features = self.backbone.extract_endpoints(batch['image'])
+        _, loss = self.shared_step(batch)
+        return {'loss': sum(loss.values()), 'log':loss}
+
+    def shared_step(self, inputs):
+        loss = dict()
+        predictions = dict()
+        # Feature extraction
+        features = self.backbone.extract_endpoints(inputs['image'])
         pyramid_features = self.fpn(features)
-        # semantic_logits = self.semantic_head(pyramid_features)
-        loss = self.instance_head(pyramid_features, batch['instance'])
-        return {'loss': sum(loss.values())}
+        # Heads Predictions
+        semantic_logits, semantic_loss = self.semantic_head(pyramid_features, inputs)
+        pred_instance, instance_losses = self.instance_head(pyramid_features, inputs)
+        # Output set up
+        loss.update(semantic_loss)
+        loss.update(instance_losses)
+        predictions.update({'semantic': semantic_logits})
+        predictions.update({'instance': pred_instance})
+        return predictions, loss
+
+    def validation_step(self, batch, batch_idx):
+        predictions, loss = self.shared_step(batch)
+        panoptic_result = panoptic_segmentation_module(predictions)
+        return {
+            'val_loss': sum(loss.values()),
+            'panoptic': panoptic_result,
+            'image_id': batch['image_id']
+        }
 
         # loss = 0
         # # Logging to TensorBoard by default
         # self.log('train_loss', loss)
         # return loss
+
+    def validation_epoch_end(self, outputs):
+        # Create and save all predictions files
+        annotations = []
+        for output in outputs:
+            create_output_file(annotations, output['panoptic'], output)
+        save_json_file(annotations)
+        # Compute PQ metric
+        pq_res = pq_compute(
+            gt_json_file=GT_JSON,
+            pred_json_file=PRED_JSON,
+            gt_folder="/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes/leftImg8bit/val/",
+            pred_folder="/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes/preds/",
+        )
+        log = {}
+        log["PQ"] = 100 * pq_res["All"]["pq"]
+        log["SQ"] = 100 * pq_res["All"]["sq"]
+        log["RQ"] = 100 * pq_res["All"]["rq"]
+        log["PQ_th"] = 100 * pq_res["Things"]["pq"]
+        log["SQ_th"] = 100 * pq_res["Things"]["sq"]
+        log["RQ_th"] = 100 * pq_res["Things"]["rq"]
+        log["PQ_st"] = 100 * pq_res["Stuff"]["pq"]
+        log["SQ_st"] = 100 * pq_res["Stuff"]["sq"]
+        log["RQ_st"] = 100 * pq_res["Stuff"]["rq"]
+        return {'log': log}
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
@@ -48,7 +96,7 @@ class EffificientPS(pl.LightningModule):
 
 #     def __init__(self):
 
-    
+
 #     def forward(self):
 
         # 1 - Apply backbone efficient det
@@ -75,7 +123,7 @@ class EffificientPS(pl.LightningModule):
         outputs = [torch.cat(list(o), dim=1) for o in outputs]
         rpn_class_logits, rpn_class, rpn_bbox = outputs
 
-            # Apply RPN 
+            # Apply RPN
             # 3.1 - Apply Network
             # input One PX feature map
             # output [anchors_prob, anchors_bbox, anchors_logit(for the loss)]
@@ -83,7 +131,7 @@ class EffificientPS(pl.LightningModule):
             # input anchors_prob, anchors_bbox
             # output  bs x roi x (256x14x14)
             # Generate proposals
-        
+
         # Proposals are [batch, N, (y1, x1, y2, x2)] in normalized coordinates
         # and zero padded.
         proposal_count = self.config.POST_NMS_ROIS_TRAINING if mode == "training" \
@@ -140,15 +188,15 @@ class EffificientPS(pl.LightningModule):
             return [rpn_class_logits, rpn_bbox, target_class_ids, mrcnn_class_logits, target_deltas, mrcnn_bbox, target_mask, mrcnn_mask]
 
             # 5 loss to compute here
-        
+
         # 4 - Semantic Segmentation Branch
         # Follow the straight forward implementation
         # 1 loss
 
         # if training :
-            # 5 Compute loss 
+            # 5 Compute loss
             # 6 optimize
-        
+
         # if inference:
             # 5 Panoptic Fusion
 

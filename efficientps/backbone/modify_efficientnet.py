@@ -1,8 +1,9 @@
+from efficientps import backbone
 import torch.nn as nn
 from efficientnet_pytorch import EfficientNet
 from inplace_abn import InPlaceABN
 
-# Output channel from layers given by the `extract_endpoints` function of 
+# Output channel from layers given by the `extract_endpoints` function of
 # efficient net, use to initialize the fpn
 output_feature_size = {
     0: [16, 24, 40, 112, 1280],
@@ -18,15 +19,18 @@ output_feature_size = {
 
 def generate_backbone_EfficientPS(id_effi_net):
 
-    backbone = EfficientNet.from_name('efficientnet-b{}'.format(id_effi_net))
-    
+    # backbone = EfficientNet.from_name('efficientnet-b{}'.format(id_effi_net))
+    backbone = EfficientNet.from_pretrained('efficientnet-b{}'.format(id_effi_net))
+
     backbone._bn0 = InPlaceABN(num_features=backbone._bn0.num_features)
     backbone._bn1 = InPlaceABN(num_features=backbone._bn1.num_features)
     backbone._swish = nn.Identity()
     for block in backbone._blocks:
         # Remove SE block
         block.has_se = False
-
+        # Additional step to have the correct number of parameter on compute
+        block._se_reduce =  nn.Identity()
+        block._se_expand = nn.Identity()
         # Replace BN with Inplace BN (default activation is leaky relu)
         block._bn1 = InPlaceABN(num_features=block._bn1.num_features)
         block._bn2 = InPlaceABN(num_features=block._bn2.num_features)

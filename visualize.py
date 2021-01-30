@@ -6,16 +6,16 @@ from datasets.panoptic_dataset import PanopticDataset
 
 
 def add_box(ax, box, color='b', thickness=2):
-    """ Draws annotations in an image. 
+    """ Draws annotations in an image.
     # Arguments
         ax          : The matplotlib ax to draw on.
-        box         : A [1, 5] matrix (x1, y1, w, h, label).
+        box         : A [1, 5] matrix (x1, y1, x2, y2, label).
         color       : The color of the boxes.
         thickness   : (optional) thickness of the bbox.
     """
-    rect = Rectangle((box[0], box[1]), box[2], box[3], 
-                        color=color, 
-                        fill=False, 
+    rect = Rectangle((box[0], box[1]), box[2]-box[0], box[3]-box[1],
+                        color=color,
+                        fill=False,
                         linewidth=thickness
                     )
     ax.add_patch(rect)
@@ -38,17 +38,17 @@ def vizualise_input_targets(dataset, seed=65):
     # Figure
     fig = plt.figure(figsize=(15,10))
     for i, (name, tensor) in enumerate(sample.items()):
-        if name == 'rpn_bbox':
+        if name == 'instance':
             continue
-            
+
         ax = fig.add_subplot(2, 3, i+1)
-        if name == 'image': 
-            add_boxes(ax, sample['rpn_bbox'], 'g')
-        
-        if name == 'instance_mask':
-            id_instance = np.random.choice(tensor.shape[0])
-            tensor = tensor[id_instance]
-        
+        if name == 'image':
+            add_boxes(ax, sample['instance'].gt_boxes.tensor.numpy(), 'g')
+
+        # if name == 'instance':
+        #     id_instance = np.random.choice(tensor.shape[0])
+        #     tensor = tensor[id_instance]
+
         ax.set_title(name)
         plt.imshow(tensor)
 
@@ -61,9 +61,9 @@ def main():
 
     transform = A.Compose([
         A.HorizontalFlip(p=0.5),
-        A.RandomScale(scale_limit=[0.5, 2]),
+        # A.RandomScale(scale_limit=[0.5, 2]),
         # A.RandomSizedCrop()
-        # A.Resize(height=500, width=500)
+        A.Resize(height=256, width=512)
     ], bbox_params=A.BboxParams(format='coco', label_fields=['class_labels']))
 
     train_dataset = PanopticDataset(train_json, base_path, 'train', transform=transform)

@@ -1,10 +1,5 @@
-import os
-import argparse
-import torch
-from config import Config
 import albumentations as A
 import pytorch_lightning as pl
-from inplace_abn import InPlaceABN
 from efficientps import EffificientPS
 from detectron2.config import get_cfg
 from torch.utils.data import DataLoader
@@ -46,9 +41,10 @@ def main():
 
     base_path = "/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes"
     train_json = "gtFine/cityscapes_panoptic_train.json"
+    valid_json = "gtFine/cityscapes_panoptic_val.json"
 
     transform = A.Compose([
-        A.HorizontalFlip(p=0.5),
+        # A.HorizontalFlip(p=0.5),
         # A.RandomScale(scale_limit=[0.5, 2]),
         # CINAPTIC_MEAN = (0.485, 0.456, 0.406) bizarre
         # CINAPTIC_STD = (0.229, 0.224, 0.225)
@@ -57,22 +53,30 @@ def main():
     ], bbox_params=A.BboxParams(format='coco', label_fields=['class_labels']))
 
     train_dataset = PanopticDataset(train_json, base_path, 'train', transform=transform)
+    valid_dataset = PanopticDataset(valid_json, base_path, 'val', transform=transform)
 
     train_loader = DataLoader(
-        train_dataset, 
-        batch_size=1,#cfg.BATCH_SIZE, 
-        shuffle=True, 
+        train_dataset,
+        batch_size=2,#cfg.BATCH_SIZE,
+        shuffle=True,
         collate_fn=collate_fn,
         pin_memory=False
     )
 
-    # Init model 
+    valid_loader = DataLoader(
+        valid_dataset,
+        batch_size=2,#cfg.BATCH_SIZE,
+        shuffle=True,
+        collate_fn=collate_fn,
+        pin_memory=False
+    )
+
+    # Init model
     efficientps = EffificientPS(cfg)
     # efficientps(train_dataset[0])
-
     # Init trainer pytorch lighting
-    trainer = pl.Trainer(fast_dev_run=True)
-    trainer.fit(efficientps, train_loader )
+    trainer = pl.Trainer(weights_summary='full', fast_dev_run=True)
+    trainer.fit(efficientps, train_loader, val_dataloaders=valid_loader)
 
 if __name__ == '__main__':
     main()

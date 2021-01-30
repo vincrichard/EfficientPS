@@ -3,8 +3,7 @@ import json
 import torch
 import numpy as np
 from PIL import Image
-from torchvision import transforms, utils
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import torchvision.transforms.functional as F
 from detectron2.structures import Instances, BitMasks, Boxes
 
@@ -27,30 +26,35 @@ class PanopticDataset(Dataset):
         data = json.load(open(path_file))
         annotations = data['annotations']
         images = data['images']
-        categories = data['categories']
+        self.categories = data['categories']
         # TODO Possible problem with VOID label and train_id
         # Add mapper to training id and class id
-        self.class_mapper = {cat['id']:{
+        self.semantic_class_mapper = {cat['id']:{
                                         'train_id':i,
-                                        'isthing':cat['isthing']
-                                    } 
-                                    for i, cat in enumerate(categories)}
-        self.class_mapper.update({0:{
-                        'train_id':len(categories) +1,
-                        'isthing':False }})
-        self.train_id_to_eval_id = [7, 8, 11, 12, 13, 17, 19, 20, 21, 22,
+                                        'isthing': cat['isthing']
+                                    }
+                                    for i, cat in enumerate(self.categories)}
+        self.instance_class_mapper = {cat['id']:{
+                                        'train_id':i
+                                    }
+                                    for i, cat in enumerate(self.categories[11:])}
+        self.semantic_class_mapper.update({0:{
+                        'train_id':len(self.categories) +1,
+                        'isthing':0 }})
+        self.semantic_train_id_to_eval_id = [7, 8, 11, 12, 13, 17, 19, 20, 21, 22,
                                         23, 24, 25, 26, 27, 28, 31, 32, 33, 0]
+        self.instance_train_id_to_eval_id = [24, 25, 26, 27, 28, 31, 32, 33]
 
         # Generate a dictionary with all needed information with idx as key
         self.meta_data = {}
         for i in range(len(images)):
             self.meta_data.update({i:{}})
             #TODO Error Message
-            assert annotations[i]['image_id'] == images[i]['id'] 
+            assert annotations[i]['image_id'] == images[i]['id']
             self.meta_data[i].update({'labelfile_name': annotations[i]['file_name']})
             self.meta_data[i].update(annotations[i])
             self.meta_data[i].update(images[i])
-    
+
     def __len__(self):
         return len(self.meta_data)
 
@@ -78,10 +82,10 @@ class PanopticDataset(Dataset):
         rpn_bbox = []
         class_bbox = []
         for seg in img_data['segments_info']:
-            seg_category = self.class_mapper[seg['category_id']]
+            seg_category = self.semantic_class_mapper[seg['category_id']]
             if seg_category['isthing']:
                 rpn_bbox.append(seg["bbox"])
-                class_bbox.append(seg_category['train_id'])
+                class_bbox.append(self.instance_class_mapper[seg['category_id']])
 
         # Apply augmentation with albumentations
         if self.transform is not None:
@@ -95,12 +99,12 @@ class PanopticDataset(Dataset):
             panoptic = transformed['mask']
             rpn_bbox = transformed['bboxes']
             class_bbox = transformed['class_labels']
-        
+
         # Create instance class for detectron (Mask RCNN Head)
         instance = Instances(panoptic.shape)
 
         # Create semantic segmentation target with augmented data
-        semantic = np.zeros_like(panoptic)
+        semantic = np.zeros_like(panoptic, dtype=np.long)
         rpn_mask = np.zeros_like(panoptic)
         instance_mask = []
         instance_cls = []
@@ -108,25 +112,27 @@ class PanopticDataset(Dataset):
         for seg in img_data['segments_info']:
             # if seg['iscrowd']:
                 #TODO
-            seg_category = self.class_mapper[seg['category_id']]
+            seg_category = self.semantic_class_mapper[seg['category_id']]
             semantic[panoptic == seg["id"]] = seg_category['train_id']
             # If segmentation is a thing generate a mask for maskrcnn target
             # Collect information for RPN targets
             if seg_category['isthing']:
+                seg_category = self.instance_class_mapper[seg['category_id']]
                 mask = np.zeros_like(panoptic)
                 mask[panoptic == seg["id"]] = 1 #seg_category['train_id']
                 instance_cls.append(seg_category['train_id'])
                 instance_mask.append(mask)
                 # RPN targets
                 rpn_mask[panoptic == seg["id"]] = 1
-        
+
         # Create same size of bbox and mask instance
         #TODO if batch_size > 1
-        rpn_bbox = coco_to_pascal_bbox(np.stack([*rpn_bbox]))
+        if len(rpn_bbox) > 0:
+            rpn_bbox = coco_to_pascal_bbox(np.stack([*rpn_bbox]))
 
-        instance.gt_masks = BitMasks(instance_mask)
-        instance.gt_classes = torch.as_tensor(instance_cls)
-        instance.gt_boxes = Boxes(rpn_bbox)
+            instance.gt_masks = BitMasks(instance_mask)
+            instance.gt_classes = torch.as_tensor(instance_cls)
+            instance.gt_boxes = Boxes(rpn_bbox)
 
         return {
             'image': np.array(image),
@@ -135,12 +141,13 @@ class PanopticDataset(Dataset):
             # 'rpn_mask': torch.as_tensor(rpn_mask),
             # # xmin, ymin, xmax, ymax
             # 'rpn_bbox': rpn_bbox,
-            'instance': instance
+            'instance': instance,
+            'image_id': img_data['image_id']
         }
 
 
 def rgb2id(color):
-    """ Pass the image from RGB to the instance id value 
+    """ Pass the image from RGB to the instance id value
     See COCO format doc https://cocodataset.org/#format-data
     """
     if isinstance(color, np.ndarray) and len(color.shape) == 3:
@@ -151,7 +158,7 @@ def rgb2id(color):
 
 
 def coco_to_pascal_bbox(bbox):
-    return np.stack((bbox[:,0], bbox[:,1], 
+    return np.stack((bbox[:,0], bbox[:,1],
             bbox[:,0]+bbox[:,2], bbox[:,1]+bbox[:,3]), axis=1)
 
 
@@ -159,5 +166,6 @@ def collate_fn(inputs):
     return {
         'image': torch.stack([F.to_tensor(i['image']) for i in inputs]),
         'semantic': torch.as_tensor([i['semantic'] for i in inputs]),
-        'instance': [i['instance'] for i in inputs]
+        'instance': [i['instance'] for i in inputs],
+        'image_id': [i['image_id'] for i in inputs]
     }
