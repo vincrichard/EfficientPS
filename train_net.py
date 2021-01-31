@@ -39,7 +39,8 @@ def main():
 
     # test(torch.rand(size=(1,3,256,512)))
 
-    base_path = "/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes"
+    # base_path = "/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes"
+    base_path = "/home/ubuntu/Elix/cityscapes"
     train_json = "gtFine/cityscapes_panoptic_train.json"
     valid_json = "gtFine/cityscapes_panoptic_val.json"
 
@@ -49,7 +50,7 @@ def main():
         # CINAPTIC_MEAN = (0.485, 0.456, 0.406) bizarre
         # CINAPTIC_STD = (0.229, 0.224, 0.225)
         # A.RandomSizedCrop()
-        A.Resize(height=256, width=512)
+        A.Resize(height=128, width=256)
     ], bbox_params=A.BboxParams(format='coco', label_fields=['class_labels']))
 
     train_dataset = PanopticDataset(train_json, base_path, 'train', transform=transform)
@@ -57,25 +58,27 @@ def main():
 
     train_loader = DataLoader(
         train_dataset,
-        batch_size=2,#cfg.BATCH_SIZE,
+        batch_size=cfg.BATCH_SIZE,
         shuffle=True,
         collate_fn=collate_fn,
-        pin_memory=False
+        pin_memory=False,
+        num_workers=4
     )
 
     valid_loader = DataLoader(
         valid_dataset,
-        batch_size=2,#cfg.BATCH_SIZE,
-        shuffle=True,
+        batch_size=cfg.BATCH_SIZE,
+        shuffle=False,
         collate_fn=collate_fn,
-        pin_memory=False
+        pin_memory=False,
+        num_workers=4
     )
 
     # Init model
     efficientps = EffificientPS(cfg)
     # efficientps(train_dataset[0])
     # Init trainer pytorch lighting
-    trainer = pl.Trainer(weights_summary='full', fast_dev_run=True)
+    trainer = pl.Trainer(weights_summary='full', gpus=1, num_sanity_val_steps=0)
     trainer.fit(efficientps, train_loader, val_dataloaders=valid_loader)
 
 if __name__ == '__main__':

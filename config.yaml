@@ -42,7 +42,7 @@ MODEL:
 TEST:
   DETECTIONS_PER_IMAGE: 300
 
-BATCH_SIZE: 1
+BATCH_SIZE: 15
 NUM_CLASS: 19
 
 EFFICIENTNET_ID: 5 # Id of the Efficient net model  (Not the usual use in detectron2)

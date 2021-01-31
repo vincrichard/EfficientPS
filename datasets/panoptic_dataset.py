@@ -133,6 +133,10 @@ class PanopticDataset(Dataset):
             instance.gt_masks = BitMasks(instance_mask)
             instance.gt_classes = torch.as_tensor(instance_cls)
             instance.gt_boxes = Boxes(rpn_bbox)
+        else:
+            instance.gt_masks = BitMasks(torch.Tensor([]).view(0,1,1))
+            instance.gt_classes = torch.as_tensor([])
+            instance.gt_boxes = Boxes([])
 
         return {
             'image': np.array(image),

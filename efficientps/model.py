@@ -71,8 +71,10 @@ class EffificientPS(pl.LightningModule):
         pq_res = pq_compute(
             gt_json_file=GT_JSON,
             pred_json_file=PRED_JSON,
-            gt_folder="/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes/leftImg8bit/val/",
-            pred_folder="/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes/preds/",
+            gt_folder="/home/ubuntu/Elix/cityscapes/gtFine/cityscapes_panoptic_val/",
+            # gt_folder="/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes/leftImg8bit/val/",
+            pred_folder="/home/ubuntu/Elix/cityscapes/preds/",
+            # pred_folder="/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes/preds/",
         )
         log = {}
         log["PQ"] = 100 * pq_res["All"]["pq"]
