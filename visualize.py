@@ -38,7 +38,7 @@ def vizualise_input_targets(dataset, seed=65):
     # Figure
     fig = plt.figure(figsize=(15,10))
     for i, (name, tensor) in enumerate(sample.items()):
-        if name == 'instance':
+        if name in ['instance', 'image_id']:
             continue
 
         ax = fig.add_subplot(2, 3, i+1)
@@ -56,14 +56,16 @@ def vizualise_input_targets(dataset, seed=65):
 
 
 def main():
-    base_path = "/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes"
+    base_path = "/home/ubuntu/Elix/cityscapes"
     train_json = "gtFine/cityscapes_panoptic_train.json"
 
     transform = A.Compose([
+        A.Resize(height=512, width=1024),
+        A.RandomCrop(height=512, width=1024),
         A.HorizontalFlip(p=0.5),
+        A.Normalize(mean=(106.433, 116.617, 119.559), std=(65.496, 67.6, 74.123)),
         # A.RandomScale(scale_limit=[0.5, 2]),
         # A.RandomSizedCrop()
-        A.Resize(height=256, width=512)
     ], bbox_params=A.BboxParams(format='coco', label_fields=['class_labels']))
 
     train_dataset = PanopticDataset(train_json, base_path, 'train', transform=transform)
