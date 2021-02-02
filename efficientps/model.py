@@ -25,7 +25,8 @@ class EffificientPS(pl.LightningModule):
         super().__init__()
         self.cfg = cfg
         self.backbone = generate_backbone_EfficientPS(cfg)
-        self.fpn = TwoWayFpn(output_feature_size[cfg.EFFICIENTNET_ID])
+        self.fpn = TwoWayFpn(
+            output_feature_size[cfg.MODEL_CUSTOM.BACKBONE.EFFICIENTNET_ID])
         self.semantic_head = SemanticHead(cfg.NUM_CLASS)
         self.instance_head = InstanceHead(cfg)
 

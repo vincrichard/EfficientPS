@@ -1,4 +1,5 @@
 import os
+import logging
 import albumentations as A
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
@@ -18,8 +19,10 @@ def add_custom_param(cfg):
     be initialised
     """
     # Model
-    cfg.MODEL.BACKBONE.EFFICIENTNET_ID = 5
-    cfg.MODEL.BACKBONE.LOAD_PRETRAIN = False
+    cfg.MODEL_CUSTOM = CfgNode()
+    cfg.MODEL_CUSTOM.BACKBONE = CfgNode()
+    cfg.MODEL_CUSTOM.BACKBONE.EFFICIENTNET_ID = 5
+    cfg.MODEL_CUSTOM.BACKBONE.LOAD_PRETRAIN = False
     # DATASET
     cfg.NUM_CLASS = 19
     cfg.DATASET_PATH = "/home/ubuntu/Elix/cityscapes"
@@ -58,6 +61,13 @@ def main():
     add_custom_param(cfg)
     cfg.merge_from_file("config.yaml")
 
+    logging.getLogger("pytorch_lightning").setLevel(logging.INFO)
+    logger = logging.getLogger("pytorch_lightning.core")
+    if not os.path.exists(cfg.CALLBACKS.CHECKPOINT_DIR):
+        os.makedirs(cfg.CALLBACKS.CHECKPOINT_DIR)
+    logger.addHandler(logging.FileHandler(
+        os.path.join(cfg.CALLBACKS.CHECKPOINT_DIR,"core.log")))
+    logger.info(cfg.dump())
     # Initialise Custom storage to avoid error when using detectron 2
     _CURRENT_STORAGE_STACK.append(EventStorage())
 
@@ -123,6 +133,7 @@ def main():
         efficientps = EffificientPS(cfg)
         cfg.CHECKPOINT_PATH = None
 
+    logger.info(efficientps.print)
     # Callbacks / Hooks
     early_stopping = EarlyStopping('PQ', patience=5, mode='max')
     checkpoint = ModelCheckpoint(monitor='PQ',

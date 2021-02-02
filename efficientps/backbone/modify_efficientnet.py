@@ -31,12 +31,12 @@ def generate_backbone_EfficientPS(cfg):
     - backbone (nn.Module) : Modify version of the EfficentNet
     """
 
-    if cfg.MODEL.BACKBONE.LOAD_PRETRAIN:
+    if cfg.MODEL_CUSTOM.BACKBONE.LOAD_PRETRAIN:
         backbone = EfficientNet.from_pretrained(
-            'efficientnet-b{}'.format(cfg.MODEL.BACKBONE.EFFICIENTNET_ID))
+            'efficientnet-b{}'.format(cfg.MODEL_CUSTOM.BACKBONE.EFFICIENTNET_ID))
     else:
         backbone = EfficientNet.from_name(
-            'efficientnet-b{}'.format(cfg.MODEL.BACKBONE.EFFICIENTNET_ID))
+            'efficientnet-b{}'.format(cfg.MODEL_CUSTOM.BACKBONE.EFFICIENTNET_ID))
 
     backbone._bn0 = InPlaceABN(num_features=backbone._bn0.num_features)
     backbone._bn1 = InPlaceABN(num_features=backbone._bn1.num_features)

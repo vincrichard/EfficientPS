@@ -10,9 +10,9 @@ class DepthwiseSeparableConv(nn.Module):
                  in_channels,
                  out_channels,
                  kernel_size,
-                 stride,
-                 padding,
-                 dilation,
+                 stride=1,
+                 padding=0,
+                 dilation=1,
                  **kwargs):
 
         super(DepthwiseSeparableConv, self).__init__()

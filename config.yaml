@@ -74,7 +74,7 @@ TRANSFORM:
 # Solver
 SOLVER:
   NAME: "Adam" # Adam or SGD
-  BASE_LR: 1.e-4
+  BASE_LR: 0.007 #1.e-4
   WEIGHT_DECAY: 0.0001 # Only for SGD
   WARMUP_ITERS: 500 # Set to 0 for no warmup
 
@@ -82,10 +82,10 @@ CALLBACKS:
   CHECKPOINT_DIR: "logs/version_2_first_test"
 
 # Path to load a model
-CHECKPOINT_PATH: "/home/ubuntu/Elix/EfficientPS-Pytorch/lightning_logs/version_52/checkpoints/epoch=1-step=992.ckpt"
+CHECKPOINT_PATH: ""
 BATCH_SIZE: 3
 NUM_CLASS: 19
-MODEL:
+MODEL_CUSTOM:
   BACKBONE:
     EFFICIENTNET_ID: 5 # Id of the EfficienNet model  (Not the usual use in detectron2)
     LOAD_PRETRAIN: True # Load pretrain EfficienNet model
