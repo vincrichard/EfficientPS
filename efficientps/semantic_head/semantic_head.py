@@ -181,15 +181,14 @@ class DPC(nn.Module):
         options = {
             'in_channels'   : 256,
             'out_channels'  : 256,
-            'kernel_size'   : 3,
-            'groups'        : 256,
+            'kernel_size'   : 3
         }
         self.conv_first = DepthwiseSeparableConv(dilation=(1, 6),
                                                  padding=(1, 6),
                                                  **options)
         self.iabn_first = InPlaceABN(256)
         # Branch 1
-        self.conv_branch_1 = DepthwiseSeparableConv(padding=1
+        self.conv_branch_1 = DepthwiseSeparableConv(padding=1,
                                                     **options)
         self.iabn_branch_1 = InPlaceABN(256)
         # Branch 2
