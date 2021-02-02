@@ -14,6 +14,25 @@ from efficientps.utils import DepthwiseSeparableConv
 
 @ROI_HEADS_REGISTRY.register()
 class CustomROIHeads(ROIHeads):
+    """
+    Similar to normal MASK RCNN ROI Heads but with separable depthwise
+    convolution and Inplace BN
+
+    Args:
+    in_features (list[str]): list of feature names to use for the heads.
+    box_pooler (ROIPooler): pooler to extra region features for box head
+    box_head (nn.Module): transform features to make box predictions
+    box_predictor (nn.Module): make box predictions from the feature.
+        Should have the same interface as :class:`FastRCNNOutputLayers`.
+    mask_pooler (ROIPooler): pooler to extract region features from image features.
+        The mask head will then take region features to make predictions.
+        If None, the mask head will directly take the dict of image features
+        defined by `mask_in_features`
+    mask_head (nn.Module): transform features to make mask predictions
+    keypoint_in_features, keypoint_pooler, keypoint_head: similar to ``mask_*``.
+    train_on_pred_boxes (bool): whether to use proposal boxes or
+        predicted boxes from the box head to train other heads.
+    """
 
     @configurable
     def __init__(
@@ -23,8 +42,8 @@ class CustomROIHeads(ROIHeads):
         box_pooler: ROIPooler,
         box_head: nn.Module,
         box_predictor: nn.Module,
-        mask_head: nn.Module,
         mask_pooler: ROIPooler,
+        mask_head: nn.Module,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -185,6 +204,10 @@ class CustomROIHeads(ROIHeads):
 
 
 class BboxNetwork(nn.Module):
+    """
+    Network responsible to extract the feature before the last two fully
+    connected layers that predict bbox reg and classes
+    """
     def __init__(self, cfg):
         super().__init__()
         # self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -205,6 +228,12 @@ class BboxNetwork(nn.Module):
 
 # @ROI_MASK_HEAD_REGISTRY.register()
 class MaskNetwork(BaseMaskRCNNHead):
+    """
+    Network that extract feature from the output feature of the pooler as
+    well as computing the mask and loss for the mask branch
+    Args:
+    num_classes (int) : num classes for the things classes
+    """
     def __init__(self, num_classes):
         super().__init__()
         self.conv_iabn_layers = nn.ModuleList([])

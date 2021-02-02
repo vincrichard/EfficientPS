@@ -1,18 +1,18 @@
 import torch.nn as nn
-
-# from detectron2.modeling.anchor_generator import build_anchor_generator
 from detectron2.modeling.proposal_generator import build_proposal_generator
 from detectron2.layers import ShapeSpec
 from detectron2.modeling.roi_heads import build_roi_heads
-#   ANCHOR_GENERATOR:
-#     SIZES: [[32], [64], [128], [256], [512]]  # One size for each in feature map
-#     ASPECT_RATIOS: [[0.5, 1.0, 2.0]]  # Three aspect ratios (same for all in feature maps)
 
 class InstanceHead(nn.Module):
+    """
+    The Instance Head is a Mask RCNN with some modification, this implementation
+    is based on detectron2
+    Args:
+    - cfg (Config) : Config object
+    """
 
     def __init__(self, cfg):
         super().__init__()
-        # self.rpn = RPNCustom(in_features=[32, 16, 8, 4])
         # Detectron 2 expect a dict of ShapeSpec object as input_shape
         input_shape = dict()
         for name, shape in zip(cfg.MODEL.RPN.IN_FEATURES, [4, 16, 8, 32]):
