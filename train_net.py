@@ -17,7 +17,8 @@ def add_custom_param(cfg):
     be initialised
     """
     # Model
-    cfg.EFFICIENTNET_ID = 5
+    cfg.MODEL.BACKBONE.EFFICIENTNET_ID = 5
+    cfg.MODEL.BACKBONE.LOAD_PRETRAIN = False
     # DATASET
     cfg.NUM_CLASS = 19
     cfg.DATASET_PATH = "/home/ubuntu/Elix/cityscapes"

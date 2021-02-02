@@ -81,8 +81,9 @@ SOLVER:
 CHECKPOINT_PATH: "/home/ubuntu/Elix/EfficientPS-Pytorch/lightning_logs/version_52/checkpoints/epoch=1-step=992.ckpt"
 BATCH_SIZE: 3
 NUM_CLASS: 19
-
-EFFICIENTNET_ID: 5 # Id of the Efficient net model  (Not the usual use in detectron2)
-
+MODEL:
+  BACKBONE:
+    EFFICIENTNET_ID: 5 # Id of the EfficienNet model  (Not the usual use in detectron2)
+    LOAD_PRETRAIN: True # Load pretrain EfficienNet model
 INFERENCE:
   AREA_TRESH: 512 #1024 / 2 because it's made on image of resize size

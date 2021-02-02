@@ -1,4 +1,3 @@
-from efficientps import backbone
 import torch.nn as nn
 from efficientnet_pytorch import EfficientNet
 from inplace_abn import InPlaceABN
@@ -17,10 +16,27 @@ output_feature_size = {
     8: [32, 56, 88, 248, 2816]
 }
 
-def generate_backbone_EfficientPS(id_effi_net):
+def generate_backbone_EfficientPS(cfg):
+    """
+    Create an EfficientNet model base on this repository:
+    https://github.com/lukemelas/EfficientNet-PyTorch
 
-    # backbone = EfficientNet.from_name('efficientnet-b{}'.format(id_effi_net))
-    backbone = EfficientNet.from_pretrained('efficientnet-b{}'.format(id_effi_net))
+    Modify the existing Efficientnet base on the EfficientPS paper,
+    ie:
+    - replace BN and swish with InplaceBN and LeakyRelu
+    - remove se (squeeze and excite) blocks
+    Args:
+    - cdg (Config) : config object
+    Return:
+    - backbone (nn.Module) : Modify version of the EfficentNet
+    """
+
+    if cfg.MODEL.BACKBONE.LOAD_PRETRAIN:
+        backbone = EfficientNet.from_pretrained(
+            'efficientnet-b{}'.format(cfg.MODEL.BACKBONE.EFFICIENTNET_ID))
+    else:
+        backbone = EfficientNet.from_name(
+            'efficientnet-b{}'.format(cfg.MODEL.BACKBONE.EFFICIENTNET_ID))
 
     backbone._bn0 = InPlaceABN(num_features=backbone._bn0.num_features)
     backbone._bn1 = InPlaceABN(num_features=backbone._bn1.num_features)
