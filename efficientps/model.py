@@ -1,20 +1,29 @@
+import os
 import torch
-import torch.nn as nn
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from .fpn import TwoWayFpn
 import pytorch_lightning as pl
 from .backbone import generate_backbone_EfficientPS, output_feature_size
 from .semantic_head import SemanticHead
 from .instance_head import InstanceHead
 from .panoptic_segmentation_module import panoptic_segmentation_module
-from .panoptic_metrics import create_output_file, save_json_file, GT_JSON, PRED_JSON
+from .panoptic_metrics import generate_pred_panoptic
 from panopticapi.evaluation import pq_compute
 
 
-
 class EffificientPS(pl.LightningModule):
+    """
+    EfficientPS model see http://panoptic.cs.uni-freiburg.de/
+    Here pytorch lightningis used https://pytorch-lightning.readthedocs.io/en/latest/
+    """
 
     def __init__(self, cfg):
+        """
+        Args:
+        - cfg (Config) : Config object from detectron2
+        """
         super().__init__()
+        self.cfg = cfg
         self.backbone = generate_backbone_EfficientPS(cfg.EFFICIENTNET_ID)
         self.fpn = TwoWayFpn(output_feature_size[cfg.EFFICIENTNET_ID])
         self.semantic_head = SemanticHead(cfg.NUM_CLASS)
@@ -29,7 +38,9 @@ class EffificientPS(pl.LightningModule):
         # training_step defined the train loop.
         # It is independent of forward
         _, loss = self.shared_step(batch)
-        return {'loss': sum(loss.values()), 'log':loss}
+        # Add losses to logs
+        [self.log(k, v) for k,v in loss.items()]
+        return {'loss': sum(loss.values())}
 
     def shared_step(self, inputs):
         loss = dict()
@@ -49,48 +60,67 @@ class EffificientPS(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         predictions, loss = self.shared_step(batch)
-        panoptic_result = panoptic_segmentation_module(predictions)
+        panoptic_result = panoptic_segmentation_module(predictions, self.device)
         return {
             'val_loss': sum(loss.values()),
             'panoptic': panoptic_result,
             'image_id': batch['image_id']
         }
 
-        # loss = 0
-        # # Logging to TensorBoard by default
-        # self.log('train_loss', loss)
-        # return loss
-
     def validation_epoch_end(self, outputs):
         # Create and save all predictions files
-        annotations = []
-        for output in outputs:
-            create_output_file(annotations, output['panoptic'], output)
-        save_json_file(annotations)
-        # Compute PQ metric
+        generate_pred_panoptic(self.cfg, outputs)
+
+        # Compute PQ metric with panpticapi
         pq_res = pq_compute(
-            gt_json_file=GT_JSON,
-            pred_json_file=PRED_JSON,
-            gt_folder="/home/ubuntu/Elix/cityscapes/gtFine/cityscapes_panoptic_val/",
-            # gt_folder="/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes/leftImg8bit/val/",
-            pred_folder="/home/ubuntu/Elix/cityscapes/preds/",
-            # pred_folder="/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes/preds/",
+            gt_json_file= os.path.join(self.cfg.DATASET_PATH,
+                                       self.cfg.VALID_JSON),
+            pred_json_file= os.path.join(self.cfg.DATASET_PATH,
+                                         self.cfg.PRED_JSON),
+            gt_folder= os.path.join(self.cfg.DATASET_PATH,
+                                    "gtFine/cityscapes_panoptic_val/"),
+            pred_folder=os.path.join(self.cfg.DATASET_PATH, self.cfg.PRED_DIR)
         )
-        log = {}
-        log["PQ"] = 100 * pq_res["All"]["pq"]
-        log["SQ"] = 100 * pq_res["All"]["sq"]
-        log["RQ"] = 100 * pq_res["All"]["rq"]
-        log["PQ_th"] = 100 * pq_res["Things"]["pq"]
-        log["SQ_th"] = 100 * pq_res["Things"]["sq"]
-        log["RQ_th"] = 100 * pq_res["Things"]["rq"]
-        log["PQ_st"] = 100 * pq_res["Stuff"]["pq"]
-        log["SQ_st"] = 100 * pq_res["Stuff"]["sq"]
-        log["RQ_st"] = 100 * pq_res["Stuff"]["rq"]
-        return {'log': log}
+        self.log("PQ", 100 * pq_res["All"]["pq"])
+        self.log("SQ", 100 * pq_res["All"]["sq"])
+        self.log("RQ", 100 * pq_res["All"]["rq"])
+        self.log("PQ_th", 100 * pq_res["Things"]["pq"])
+        self.log("SQ_th", 100 * pq_res["Things"]["sq"])
+        self.log("RQ_th", 100 * pq_res["Things"]["rq"])
+        self.log("PQ_st", 100 * pq_res["Stuff"]["pq"])
+        self.log("SQ_st", 100 * pq_res["Stuff"]["sq"])
+        self.log("RQ_st", 100 * pq_res["Stuff"]["rq"])
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        return optimizer
+        if self.cfg.SOLVER.NAME == "Adam":
+            optimizer = torch.optim.Adam(self.parameters(),
+                                         lr=self.cfg.SOLVER.BASE_LR)
+        elif self.cfg.SOLVER.NAME == "SGD":
+            optimizer = torch.optim.SGD(self.parameters(),
+                                        lr=self.cfg.SOLVER.BASE_LR,
+                                        momentum=0.9,
+                                        weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
+        else:
+            raise ValueError("Solver name is not supported, \
+                Adam or SGD : {}".format(self.cfg.SOLVER.NAME))
+        return {
+            'optimizer': optimizer,
+            # 'scheduler': StepLR(optimizer, [120, 144], gamma=0.1),
+            'scheduler': ReduceLROnPlateau(optimizer, mode='max', patience=3, verbose=True),
+            'monitor': 'PQ'
+        }
+
+    def optimizer_step(self, current_epoch, batch_nb, optimizer, optimizer_idx, closure, on_tpu=False, using_native_amp=False, using_lbfgs=False):
+        # warm up lr
+        if self.trainer.global_step < self.cfg.SOLVER.WARMUP_ITERS:
+            lr_scale = min(1., float(self.trainer.global_step + 1) /
+                                    float(self.cfg.SOLVER.WARMUP_ITERS))
+            for pg in optimizer.param_groups:
+                pg['lr'] = lr_scale * self.cfg.SOLVER.BASE_LR
+
+        # update params
+        optimizer.step(closure=closure)
+
 
 """
 
