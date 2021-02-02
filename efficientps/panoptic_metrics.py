@@ -1,5 +1,6 @@
 import os
 import json
+from tqdm import tqdm
 import numpy as np
 from PIL import Image
 import torch.nn.functional as F
@@ -19,8 +20,9 @@ def generate_pred_panoptic(cfg, outputs):
     if not os.path.exists(pred_dir): os.makedirs(pred_dir)
 
     annotations = []
+    print("Saving panoptic prediction to compute validation metrics")
     # Loop on each validation output
-    for output in outputs:
+    for output in tqdm(outputs):
         # Loop on each image of the batch
         for img_panoptic, image_id in zip(output['panoptic'], output['image_id']):
             img_data = dict()
