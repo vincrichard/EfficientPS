@@ -3,7 +3,8 @@ import albumentations as A
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import (
-    EarlyStopping
+    EarlyStopping,
+    ModelCheckpoint
 )
 from detectron2.config import get_cfg, CfgNode
 from detectron2.utils.events import _CURRENT_STORAGE_STACK, EventStorage
@@ -44,6 +45,9 @@ def add_custom_param(cfg):
     # Runner
     cfg.BATCH_SIZE = 1
     cfg.CHECKPOINT_PATH = ""
+    # Callbacks
+    cfg.CALLBACKS = CfgNode()
+    cfg.CALLBACKS.CHECKPOINT_DIR = None
     # Inference
     cfg.INFERENCE = CfgNode()
     cfg.INFERENCE.AREA_TRESH = 0
@@ -121,6 +125,11 @@ def main():
 
     # Callbacks / Hooks
     early_stopping = EarlyStopping('PQ', patience=5, mode='max')
+    checkpoint = ModelCheckpoint(monitor='PQ',
+                                 mode='max',
+                                 dirpath=cfg.CALLBACKS.CHECKPOINT_DIR,
+                                 save_last=True,
+                                 verbose=True,)
 
     # Create a pytorch lighting trainer
     trainer = pl.Trainer(
@@ -128,7 +137,7 @@ def main():
         gpus=1,
         num_sanity_val_steps=0,
         # fast_dev_run=True,
-        callbacks=[early_stopping],
+        callbacks=[early_stopping, checkpoint],
         precision=16,
         resume_from_checkpoint=cfg.CHECKPOINT_PATH,
         min_epochs=10,
