@@ -2,12 +2,14 @@ import torch.nn as nn
 from inplace_abn import InPlaceABN
 # detectron 2 dependencies
 from detectron2.modeling.proposal_generator.rpn import StandardRPNHead
-from detectron2.structures import ImageList, Instances, Boxes
+from detectron2.structures import ImageList
 from detectron2.modeling.proposal_generator import (
-    RPN, 
+    RPN,
     RPN_HEAD_REGISTRY,
     PROPOSAL_GENERATOR_REGISTRY
 )
+
+from efficientps.utils import DepthwiseSeparableConv
 
 @PROPOSAL_GENERATOR_REGISTRY.register()
 class RPNCustom(RPN):
@@ -24,31 +26,22 @@ class RPNCustom(RPN):
     Create the different input needed for detectron2 forward method
     """
     # Create image a ImageList instance only use for the image_size
-    batch_size = features['P_4'].shape[0] 
+    batch_size = features['P_4'].shape[0]
     image_size = (features['P_4'].shape[2] * 4, features['P_4'].shape[3] * 4)
     images = ImageList(None, [image_size for i in range(batch_size)])
-    # Create gt_instances, instance List[Instances]
-    # gt_instances = []
-    # for i in range(batch_size):
-    #     instance = Instances(image_size)
-    #     instance.gt_boxes = Boxes(bboxes[i])
-    #     gt_instances.append(instance)
-
     return super().forward(images, features, gt_instances)
 
 @RPN_HEAD_REGISTRY.register()
-class RPNHeadCustom(StandardRPNHead):
+class DepthwiseSepRPNHead(StandardRPNHead):
 
     def __init__(self, cfg, input_shape):
         super().__init__(cfg, input_shape)
-        # Create anchor generator
-        # self.anchor_generator = DefaultAnchorGenerator(
-        #     sizes=[32, 64, 128, 256, 512],
-        #     aspect_ratios=[0.5, 1.0, 2.0],
-        #     strides=[32, 16, 8, 4])
-        # Modify version of the convoution and Inplace batchNorm
+        # Modify version of the convolution and Inplace batchNorm
         in_channels=input_shape[0].channels
-        self.conv = nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1, groups=in_channels)
+        self.conv = DepthwiseSeparableConv(in_channels,
+                                           in_channels,
+                                           kernel_size=3,
+                                           padding=1)
         self.iabn = InPlaceABN(in_channels)
 
     def forward(self, features):
@@ -72,5 +65,3 @@ class RPNHeadCustom(StandardRPNHead):
             pred_objectness_logits.append(self.objectness_logits(t))
             pred_anchor_deltas.append(self.anchor_deltas(t))
         return pred_objectness_logits, pred_anchor_deltas
-
-

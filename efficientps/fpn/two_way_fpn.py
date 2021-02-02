@@ -4,6 +4,8 @@ from torch.nn import Conv2d
 import torch.nn.functional as F
 from inplace_abn import InPlaceABN
 
+from efficientps.utils import DepthwiseSeparableConv
+
 
 class TwoWayFpn(nn.Module):
     """
@@ -64,24 +66,32 @@ class TwoWayFpn(nn.Module):
 
         # Separable Conv and Inplace BN at the output of the FPN
         # x4
-        self.depth_wise_conv_x4 = Conv2d(
-            in_channels=256, out_channels=256, groups=256,
-            kernel_size=3, padding=1)
+        self.depth_wise_conv_x4 = DepthwiseSeparableConv(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=3,
+            padding=1)
         self.iabn_out_x4 = InPlaceABN(256)
         # x8
-        self.depth_wise_conv_x8 = Conv2d(
-            in_channels=256, out_channels=256, groups=256,
-            kernel_size=3, padding=1)
+        self.depth_wise_conv_x8 = DepthwiseSeparableConv(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=3,
+            padding=1)
         self.iabn_out_x8 = InPlaceABN(256)
         # x16
-        self.depth_wise_conv_x16 = Conv2d(
-            in_channels=256, out_channels=256, groups=256,
-            kernel_size=3, padding=1)
+        self.depth_wise_conv_x16 = DepthwiseSeparableConv(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=3,
+            padding=1)
         self.iabn_out_x16 = InPlaceABN(256)
         # x32
-        self.depth_wise_conv_x32 = Conv2d(
-            in_channels=256, out_channels=256, groups=256,
-            kernel_size=3, padding=1)
+        self.depth_wise_conv_x32 = DepthwiseSeparableConv(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=3,
+            padding=1)
         self.iabn_out_x32 = InPlaceABN(256)
 
     def forward(self, inputs):

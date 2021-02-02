@@ -7,8 +7,10 @@ from detectron2.modeling.roi_heads import FastRCNNOutputLayers
 from detectron2.modeling.roi_heads import ROI_HEADS_REGISTRY, ROIHeads, BaseMaskRCNNHead, select_foreground_proposals
 from detectron2.layers import ShapeSpec
 from detectron2.structures import Instances
-
 from inplace_abn import InPlaceABN
+
+
+from efficientps.utils import DepthwiseSeparableConv
 
 @ROI_HEADS_REGISTRY.register()
 class CustomROIHeads(ROIHeads):
@@ -207,7 +209,10 @@ class MaskNetwork(BaseMaskRCNNHead):
         super().__init__()
         self.conv_iabn_layers = nn.ModuleList([])
         for i in range(4):
-            separable_conv = nn.Conv2d(256, 256, kernel_size=3, groups=256, padding=1)
+            separable_conv = DepthwiseSeparableConv(in_channels=256,
+                                                    out_channels=256,
+                                                    kernel_size=3,
+                                                    padding=1)
             self.conv_iabn_layers.append(separable_conv)
             iabn = InPlaceABN(256)
             self.conv_iabn_layers.append(iabn)

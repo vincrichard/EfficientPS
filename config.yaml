@@ -5,7 +5,7 @@ MODEL:
   PROPOSAL_GENERATOR:
     NAME: "RPNCustom"
   RPN:
-    HEAD_NAME: "RPNHeadCustom"
+    HEAD_NAME: "DepthwiseSepRPNHead" # Normal RPN Head "StandardRPNHead"
     IN_FEATURES: ["P_4", "P_8", "P_16", "P_32"]
     PRE_NMS_TOPK_TRAIN: 2000  # Per FPN level
     PRE_NMS_TOPK_TEST: 2000  # Per FPN level

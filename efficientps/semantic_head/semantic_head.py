@@ -3,6 +3,8 @@ import torch.nn as nn
 from torch.nn import functional as F
 from inplace_abn import InPlaceABN
 
+from efficientps.utils import DepthwiseSeparableConv
+
 
 class SemanticHead(nn.Module):
 
@@ -111,8 +113,8 @@ class LSFE(nn.Module):
     def __init__(self):
         super().__init__()
         # Separable Conv
-        self.conv_1 = nn.Conv2d(256, 128, 3, groups=128, padding=1)
-        self.conv_2 = nn.Conv2d(128, 128, 3, groups=128, padding=1)
+        self.conv_1 = DepthwiseSeparableConv(256, 128, 3, padding=1)
+        self.conv_2 = DepthwiseSeparableConv(128, 128, 3, padding=1)
         # Inplace BN + Leaky Relu
         self.abn_1 = InPlaceABN(128)
         self.abn_2 = InPlaceABN(128)
@@ -134,8 +136,8 @@ class MC(nn.Module):
         # Conv are similar to LSFE module
         # self.lfse = LSFE()
         # Separable Conv
-        self.conv_1 = nn.Conv2d(128, 128, 3, groups=128, padding=1)
-        self.conv_2 = nn.Conv2d(128, 128, 3, groups=128, padding=1)
+        self.conv_1 = DepthwiseSeparableConv(128, 128, 3, padding=1)
+        self.conv_2 = DepthwiseSeparableConv(128, 128, 3, padding=1)
         # Inplace BN + Leaky Relu
         self.abn_1 = InPlaceABN(128)
         self.abn_2 = InPlaceABN(128)
@@ -168,19 +170,28 @@ class DPC(nn.Module):
             'kernel_size'   : 3,
             'groups'        : 256,
         }
-        self.conv_first = nn.Conv2d(dilation=(1, 6), padding=(1, 6), **options)
+        self.conv_first = DepthwiseSeparableConv(dilation=(1, 6),
+                                                 padding=(1, 6),
+                                                 **options)
         self.iabn_first = InPlaceABN(256)
         # Branch 1
-        self.conv_branch_1 = nn.Conv2d(**options, padding=1)
+        self.conv_branch_1 = DepthwiseSeparableConv(padding=1
+                                                    **options)
         self.iabn_branch_1 = InPlaceABN(256)
         # Branch 2
-        self.conv_branch_2 = nn.Conv2d(dilation=(6, 21), padding=(6, 21), **options)
+        self.conv_branch_2 = DepthwiseSeparableConv(dilation=(6, 21),
+                                                    padding=(6, 21),
+                                                    **options)
         self.iabn_branch_2 = InPlaceABN(256)
         #Branch 3
-        self.conv_branch_3 = nn.Conv2d(dilation=(18, 15), padding=(18, 15), **options)
+        self.conv_branch_3 = DepthwiseSeparableConv(dilation=(18, 15),
+                                                    padding=(18, 15),
+                                                    **options)
         self.iabn_branch_3 = InPlaceABN(256)
         # Branch 4
-        self.conv_branch_4 = nn.Conv2d(dilation=(6, 3), padding=(6, 3), **options)
+        self.conv_branch_4 = DepthwiseSeparableConv(dilation=(6, 3),
+                                                    padding=(6, 3),
+                                                    **options)
         self.iabn_branch_4 = InPlaceABN(256)
         # Last conv
         # There is some mismatch in the paper about the dimension of this conv
@@ -189,7 +200,7 @@ class DPC(nn.Module):
         # DPC module." But the overall schema shows an output of 128
         # The MC module schema also show an input of 256.
         # In order to have 512 channel at the concatenation of all layers,
-        # I choose 128 output channels
+        # I choosed 128 output channels
         self.conv_last = nn.Conv2d(1280, 128, 1)
         self.iabn_last = InPlaceABN(128)
 
