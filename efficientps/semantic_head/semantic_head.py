@@ -1,3 +1,4 @@
+from math import ceil
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -7,6 +8,11 @@ from efficientps.utils import DepthwiseSeparableConv
 
 
 class SemanticHead(nn.Module):
+    """
+    Semantic Head compose of three main module DPC, LSFE and MC
+    Args:
+    - nb_class (int) : number of classes in the dataset
+    """
 
     def __init__(self, nb_class):
         super().__init__()
@@ -27,6 +33,7 @@ class SemanticHead(nn.Module):
 
 
     def forward(self, inputs, targets={}):
+        # TODO Make a loop
         # The forward is apply in a bottom up manner
         # x32 size
         p_32 = inputs['P_32']
@@ -35,12 +42,14 @@ class SemanticHead(nn.Module):
         p_32_to_merge = F.interpolate(
             p_32,
             scale_factor=(2, 2),
-            mode='bilinear')
+            mode='bilinear',
+            align_corners=False)
         # [B, C, x16H, x16W] -> [B, C, x4H, x4W]
         p_32 = F.interpolate(
             p_32_to_merge,
             scale_factor=(4, 4),
-            mode='bilinear')
+            mode='bilinear',
+            align_corners=False)
 
         # x16 size
         p_16 = inputs['P_16']
@@ -50,7 +59,8 @@ class SemanticHead(nn.Module):
         p_16 = F.interpolate(
             p_16,
             scale_factor=(4, 4),
-            mode='bilinear')
+            mode='bilinear',
+            align_corners=False)
         # [B, C, x16H, x16W] -> [B, C, x8H, x8W]
         p_16_to_merge = self.mc_16_to_8(p_16_to_merge)
 
@@ -64,7 +74,8 @@ class SemanticHead(nn.Module):
         p_8 = F.interpolate(
             p_8,
             scale_factor=(2, 2),
-            mode='bilinear')
+            mode='bilinear',
+            align_corners=False)
 
         # x4 size
         p_4 = inputs['P_4']
@@ -78,7 +89,8 @@ class SemanticHead(nn.Module):
         outputs = F.interpolate(
             outputs,
             scale_factor=(4, 4),
-            mode='bilinear')
+            mode='bilinear',
+            align_corners=False)
 
         if 'semantic' in targets.keys():
             return self.softmax(outputs), self.loss(outputs, targets['semantic'])
@@ -90,20 +102,21 @@ class SemanticHead(nn.Module):
         Weighted pixel loss, described in the paper as :
         if loss \in worst 25% of per pixel loss then w = 4/(H*W)
         else w = 0
+        We keep 25% of each image appy the weigth and then compute the mean.
         """
         # First apply cross entropy on the image.
         # We already computed the logSoftmax so only the Negative log
         # likelyhood is to be computed
         loss = self.cross_entropy_loss(inputs, targets)
         # sort the loss and take 25 % worst pixel
-        # [B, 1, H, W] -> [B, H * W] (a vérifier)
+        # [B, 1, H, W] -> [B, H * W]
         loss = loss.view(loss.shape[0], -1)
         size = loss.shape[1]
-        max_id = int(size * 0.25)
+        max_id = int(ceil(size * 0.25))
         sorted_loss = torch.sort(loss, descending=True).values
         kept_loss = sorted_loss[:, : max_id]
         kept_loss = kept_loss * 4 / size
-        kept_loss = torch.sum(kept_loss) / loss.shape[0]
+        kept_loss = torch.mean(kept_loss)
         return {
             'semantic_loss': kept_loss
         }
@@ -158,7 +171,8 @@ class MC(nn.Module):
         return F.interpolate(
             outputs,
             scale_factor=(2, 2),
-            mode='bilinear')
+            mode='bilinear',
+            align_corners=False)
 
 class DPC(nn.Module):
 
