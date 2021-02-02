@@ -60,7 +60,9 @@ class EffificientPS(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         predictions, loss = self.shared_step(batch)
-        panoptic_result = panoptic_segmentation_module(predictions, self.device)
+        panoptic_result = panoptic_segmentation_module(self.cfg,
+            predictions,
+            self.device)
         return {
             'val_loss': sum(loss.values()),
             'panoptic': panoptic_result,

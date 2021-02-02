@@ -43,6 +43,9 @@ def add_custom_param(cfg):
     # Runner
     cfg.BATCH_SIZE = 1
     cfg.CHECKPOINT_PATH = ""
+    # Inference
+    cfg.INFERENCE = CfgNode()
+    cfg.INFERENCE.AREA_TRESH = 0
 
 def main():
     # Retrieve Config and and custom base parameter

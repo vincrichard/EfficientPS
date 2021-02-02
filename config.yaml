@@ -73,13 +73,16 @@ TRANSFORM:
 
 # Solver
 SOLVER:
-  NAME: "SGD" # Adam or SGD
-  BASE_LR: 2.7542287033381663e-07
+  NAME: "Adam" # Adam or SGD
+  BASE_LR: 1.e-4
   WEIGHT_DECAY: 0.0001 # Only for SGD
   WARMUP_ITERS: 500 # Set to 0 for no warmup
 
-CHECKPOINT_PATH: "" #"/home/ubuntu/Elix/EfficientPS-Pytorch/lightning_logs/version_49/checkpoints/epoch=4-step=4957.ckpt"
+CHECKPOINT_PATH: "/home/ubuntu/Elix/EfficientPS-Pytorch/lightning_logs/version_52/checkpoints/epoch=1-step=992.ckpt"
 BATCH_SIZE: 3
 NUM_CLASS: 19
 
 EFFICIENTNET_ID: 5 # Id of the Efficient net model  (Not the usual use in detectron2)
+
+INFERENCE:
+  AREA_TRESH: 512 #1024 / 2 because it's made on image of resize size
