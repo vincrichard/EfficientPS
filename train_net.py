@@ -67,7 +67,8 @@ def main():
         os.makedirs(cfg.CALLBACKS.CHECKPOINT_DIR)
     logger.addHandler(logging.FileHandler(
         os.path.join(cfg.CALLBACKS.CHECKPOINT_DIR,"core.log")))
-    logger.info(cfg.dump())
+    with open("config.yaml") as file:
+        logger.info(file.read())
     # Initialise Custom storage to avoid error when using detectron 2
     _CURRENT_STORAGE_STACK.append(EventStorage())
 
@@ -86,7 +87,8 @@ def main():
 
     transform_valid = A.Compose([
         A.Resize(height=512, width=1024),
-        A.Normalize(mean=(106.433, 116.617, 119.559), std=(65.496, 67.6, 74.123)),
+        A.Normalize(mean=cfg.TRANSFORM.NORMALIZE.MEAN,
+                    std=cfg.TRANSFORM.NORMALIZE.STD),
     ], bbox_params=A.BboxParams(format='coco', label_fields=['class_labels']))
 
     # Create Dataset
@@ -148,14 +150,16 @@ def main():
         gpus=1,
         num_sanity_val_steps=0,
         # fast_dev_run=True,
-        callbacks=[early_stopping, checkpoint],
+        checkpoint_callback=checkpoint,
+        early_stop_callback=early_stopping,
         precision=16,
-        resume_from_checkpoint=cfg.CHECKPOINT_PATH,
-        min_epochs=10,
+        # resume_from_checkpoint=cfg.CHECKPOINT_PATH,
         gradient_clip_val=35,
+        # accumulate_grad_batches=5
         # auto_lr_find=True
     )
     # trainer.tune(efficientps, train_loader)
+    logger.addHandler(logging.StreamHandler())
     trainer.fit(efficientps, train_loader, val_dataloaders=valid_loader)
 
 if __name__ == '__main__':

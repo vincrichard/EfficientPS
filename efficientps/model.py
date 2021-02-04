@@ -41,6 +41,7 @@ class EffificientPS(pl.LightningModule):
         _, loss = self.shared_step(batch)
         # Add losses to logs
         [self.log(k, v) for k,v in loss.items()]
+        self.log('train_loss', sum(loss.values()))
         return {'loss': sum(loss.values())}
 
     def shared_step(self, inputs):
@@ -96,10 +97,10 @@ class EffificientPS(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.cfg.SOLVER.NAME == "Adam":
-            optimizer = torch.optim.Adam(self.parameters(),
+            self.optimizer = torch.optim.Adam(self.parameters(),
                                          lr=self.cfg.SOLVER.BASE_LR)
         elif self.cfg.SOLVER.NAME == "SGD":
-            optimizer = torch.optim.SGD(self.parameters(),
+            self.optimizer = torch.optim.SGD(self.parameters(),
                                         lr=self.cfg.SOLVER.BASE_LR,
                                         momentum=0.9,
                                         weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
@@ -107,9 +108,14 @@ class EffificientPS(pl.LightningModule):
             raise ValueError("Solver name is not supported, \
                 Adam or SGD : {}".format(self.cfg.SOLVER.NAME))
         return {
-            'optimizer': optimizer,
-            # 'scheduler': StepLR(optimizer, [120, 144], gamma=0.1),
-            'scheduler': ReduceLROnPlateau(optimizer, mode='max', patience=3, verbose=True),
+            'optimizer': self.optimizer,
+            # 'lr_scheduler': StepLR(self.optimizer, [35, 45], gamma=0.1),
+            'lr_scheduler': ReduceLROnPlateau(self.optimizer,
+                                              mode='max',
+                                              patience=3,
+                                              factor=0.1,
+                                              min_lr=1e-4,
+                                              verbose=True),
             'monitor': 'PQ'
         }
 
