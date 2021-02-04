@@ -41,13 +41,15 @@ def generate_backbone_EfficientPS(cfg):
     backbone._bn0 = InPlaceABN(num_features=backbone._bn0.num_features)
     backbone._bn1 = InPlaceABN(num_features=backbone._bn1.num_features)
     backbone._swish = nn.Identity()
-    for block in backbone._blocks:
+    for i, block in enumerate(backbone._blocks):
         # Remove SE block
         block.has_se = False
         # Additional step to have the correct number of parameter on compute
         block._se_reduce =  nn.Identity()
         block._se_expand = nn.Identity()
         # Replace BN with Inplace BN (default activation is leaky relu)
+        if '_bn0' in [name for name, layer in block.named_children()]:
+            block._bn0 = InPlaceABN(num_features=block._bn0.num_features)
         block._bn1 = InPlaceABN(num_features=block._bn1.num_features)
         block._bn2 = InPlaceABN(num_features=block._bn2.num_features)
 

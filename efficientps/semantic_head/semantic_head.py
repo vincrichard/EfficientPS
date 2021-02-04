@@ -116,7 +116,7 @@ class SemanticHead(nn.Module):
         sorted_loss = torch.sort(loss, descending=True).values
         kept_loss = sorted_loss[:, : max_id]
         kept_loss = kept_loss * 4 / size
-        kept_loss = torch.mean(kept_loss)
+        kept_loss = torch.sum(kept_loss) / loss.shape[0]
         return {
             'semantic_loss': kept_loss
         }

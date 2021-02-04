@@ -247,7 +247,7 @@ class MaskNetwork(BaseMaskRCNNHead):
             self.conv_iabn_layers.append(iabn)
         self.deconv = nn.ConvTranspose2d(256, 256, kernel_size=2, stride=2)
         self.last_iabn = InPlaceABN(256)
-        self.last_conv = nn.Conv2d(256, num_classes, kernel_size=1)
+        self.last_conv = nn.Conv2d(256, num_classes + 1, kernel_size=1)
 
     def layers(self, x):
         for layer in self.conv_iabn_layers:
