@@ -32,7 +32,7 @@ Training config
 	Augmentation:
 		- RandomCrop
 		- RandomFlip
-			- Normalize
+		- Normalize
 	Warmup: 200 iteration 1/3 lr to lr
 	Scheduler: StepLR
 		- step [120, 144]
