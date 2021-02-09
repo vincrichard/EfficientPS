@@ -50,6 +50,7 @@ TEST:
 #### CUSTOM PARAMETER  #####
 
 # DATA
+# Path to cityscapes dataset
 DATASET_PATH: "/home/ubuntu/Elix/cityscapes"
 #DATASET_PATH: "/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes"
 TRAIN_JSON: "gtFine/cityscapes_panoptic_train.json"
@@ -57,7 +58,7 @@ VALID_JSON: "gtFine/cityscapes_panoptic_val.json"
 PRED_DIR: "preds" # Path of images generated in the dataset folder
 PRED_JSON: "cityscapes_panoptic_preds.json" # Path in the dataset folde of the prediction json created
 
-# TRANSFORM
+# TRANSFORM base on albumentation https://albumentations.ai/
 TRANSFORM:
   NORMALIZE:
     MEAN: (0.485, 0.456, 0.406)
@@ -70,26 +71,22 @@ TRANSFORM:
     WIDTH: 1024
   HFLIP:
     PROB: 0.5
-#   self.MEAN = [0.28689529, 0.32513294, 0.28389176]
-#         self.STD = [0.17613647, 0.18099176, 0.17772235]
-# 0.485, 0.456, 0.406) bizarre
-        # CINAPTIC_STD = (0.229, 0.224, 0.225)
-#         CITYSCAPES_MEAN = [0.28689554, 0.32513303, 0.28389177]
-# CITYSCAPES_STD = [0.18696375, 0.19017339, 0.18720214]
 
 # Solver
 SOLVER:
   NAME: "Adam" # Adam or SGD
-  BASE_LR: 0.007 #1.e-4
+  BASE_LR: 1.3e-3
   WEIGHT_DECAY: 0.0001 # Only for SGD
   WARMUP_ITERS: 500 # Set to 0 for no warmup
+  ACCUMULATE_GRAD: 1 # Number of accumulated epochs for accumulated gradient
 
 CALLBACKS:
-  CHECKPOINT_DIR: "logs/adam_lr_66e5"
+  CHECKPOINT_DIR: "logs/test"
 
 # Path to load a model
 CHECKPOINT_PATH: ""
 BATCH_SIZE: 3
+PRECISION: 16 # Bit precision for mix precision training
 NUM_CLASS: 19
 MODEL_CUSTOM:
   BACKBONE:

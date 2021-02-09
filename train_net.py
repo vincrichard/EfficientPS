@@ -45,9 +45,11 @@ def add_custom_param(cfg):
     cfg.TRANSFORM.HFLIP.PROB = 0.5
     # Solver
     cfg.SOLVER.NAME = "SGD"
+    cfg.SOLVER.ACCUMULATE_GRAD = 1
     # Runner
     cfg.BATCH_SIZE = 1
     cfg.CHECKPOINT_PATH = ""
+    cfg.PRECISION = 32
     # Callbacks
     cfg.CALLBACKS = CfgNode()
     cfg.CALLBACKS.CHECKPOINT_DIR = None
@@ -150,15 +152,12 @@ def main():
         gpus=1,
         num_sanity_val_steps=0,
         # fast_dev_run=True,
-        checkpoint_callback=checkpoint,
-        early_stop_callback=early_stopping,
-        precision=16,
-        # resume_from_checkpoint=cfg.CHECKPOINT_PATH,
-        gradient_clip_val=35,
-        # accumulate_grad_batches=5
-        # auto_lr_find=True
+        callbacks=[early_stopping, checkpoint],
+        precision=cfg.PRECISION,
+        resume_from_checkpoint=cfg.CHECKPOINT_PATH,
+        gradient_clip_val=15,
+        accumulate_grad_batches=cfg.SOLVER.ACCUMULATE_GRAD
     )
-    # trainer.tune(efficientps, train_loader)
     logger.addHandler(logging.StreamHandler())
     trainer.fit(efficientps, train_loader, val_dataloaders=valid_loader)
 
