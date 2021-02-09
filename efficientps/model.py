@@ -98,7 +98,8 @@ class EffificientPS(pl.LightningModule):
     def configure_optimizers(self):
         if self.cfg.SOLVER.NAME == "Adam":
             self.optimizer = torch.optim.Adam(self.parameters(),
-                                         lr=self.cfg.SOLVER.BASE_LR)
+                                         lr=self.cfg.SOLVER.BASE_LR,
+                                         weight_decay=self.cfg.SOLVER.WEIGHT_DECAY)
         elif self.cfg.SOLVER.NAME == "SGD":
             self.optimizer = torch.optim.SGD(self.parameters(),
                                         lr=self.cfg.SOLVER.BASE_LR,

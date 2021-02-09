@@ -58,7 +58,7 @@ VALID_JSON: "gtFine/cityscapes_panoptic_val.json"
 PRED_DIR: "preds" # Path of images generated in the dataset folder
 PRED_JSON: "cityscapes_panoptic_preds.json" # Path in the dataset folde of the prediction json created
 
-# TRANSFORM base on albumentation https://albumentations.ai/
+# TRANSFORM based on albumentation https://albumentations.ai/
 TRANSFORM:
   NORMALIZE:
     MEAN: (0.485, 0.456, 0.406)
@@ -90,7 +90,7 @@ PRECISION: 16 # Bit precision for mix precision training
 NUM_CLASS: 19
 MODEL_CUSTOM:
   BACKBONE:
-    EFFICIENTNET_ID: 5 # Id of the EfficienNet model  (Not the usual use in detectron2)
-    LOAD_PRETRAIN: True # Load pretrain EfficienNet model
+    EFFICIENTNET_ID: 5 # Id of the EfficienNet model
+    LOAD_PRETRAIN: True # Load pretrained EfficienNet model
 INFERENCE:
   AREA_TRESH: 512 #1024 / 2 because it's made on image of resize size

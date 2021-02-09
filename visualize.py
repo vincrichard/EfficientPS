@@ -45,10 +45,6 @@ def vizualise_input_targets(dataset, seed=65):
         if name == 'image':
             add_boxes(ax, sample['instance'].gt_boxes.tensor.numpy(), 'g')
 
-        # if name == 'instance':
-        #     id_instance = np.random.choice(tensor.shape[0])
-        #     tensor = tensor[id_instance]
-
         ax.set_title(name)
         plt.imshow(tensor)
 

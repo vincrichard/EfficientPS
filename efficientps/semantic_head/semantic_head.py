@@ -105,8 +105,6 @@ class SemanticHead(nn.Module):
         We keep 25% of each image appy the weigth and then compute the mean.
         """
         # First apply cross entropy on the image.
-        # We already computed the logSoftmax so only the Negative log
-        # likelyhood is to be computed
         loss = self.cross_entropy_loss(inputs, targets)
         # sort the loss and take 25 % worst pixel
         # [B, 1, H, W] -> [B, H * W]
@@ -146,8 +144,6 @@ class MC(nn.Module):
 
     def __init__(self):
         super().__init__()
-        # Conv are similar to LSFE module
-        # self.lfse = LSFE()
         # Separable Conv
         self.conv_1 = DepthwiseSeparableConv(128, 128, 3, padding=1)
         self.conv_2 = DepthwiseSeparableConv(128, 128, 3, padding=1)

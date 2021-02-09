@@ -84,7 +84,6 @@ def main():
         A.Normalize(mean=cfg.TRANSFORM.NORMALIZE.MEAN,
                     std=cfg.TRANSFORM.NORMALIZE.STD),
         # A.RandomScale(scale_limit=[0.5, 2]),
-        # A.RandomSizedCrop()
     ], bbox_params=A.BboxParams(format='coco', label_fields=['class_labels']))
 
     transform_valid = A.Compose([

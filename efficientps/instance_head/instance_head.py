@@ -13,7 +13,7 @@ class InstanceHead(nn.Module):
 
     def __init__(self, cfg):
         super().__init__()
-        # Detectron 2 expect a dict of ShapeSpec object as input_shape
+        # Detectron 2 expects a dict of ShapeSpec object as input_shape
         input_shape = dict()
         for name, shape in zip(cfg.MODEL.RPN.IN_FEATURES, [4, 8, 16, 32]):
             input_shape[name] = ShapeSpec(channels=256, stride=shape)

@@ -110,8 +110,6 @@ class PanopticDataset(Dataset):
         instance_cls = []
 
         for seg in img_data['segments_info']:
-            # if seg['iscrowd']:
-                #TODO
             seg_category = self.semantic_class_mapper[seg['category_id']]
             semantic[panoptic == seg["id"]] = seg_category['train_id']
             # If segmentation is a thing generate a mask for maskrcnn target
@@ -126,7 +124,6 @@ class PanopticDataset(Dataset):
                 rpn_mask[panoptic == seg["id"]] = 1
 
         # Create same size of bbox and mask instance
-        #TODO if batch_size > 1
         if len(rpn_bbox) > 0:
             rpn_bbox = coco_to_pascal_bbox(np.stack([*rpn_bbox]))
 
@@ -141,10 +138,6 @@ class PanopticDataset(Dataset):
         return {
             'image': np.array(image),
             'semantic': semantic,
-            # 'instance_mask': torch.as_tensor(np.stack([*instance_mask])),
-            # 'rpn_mask': torch.as_tensor(rpn_mask),
-            # # xmin, ymin, xmax, ymax
-            # 'rpn_bbox': rpn_bbox,
             'instance': instance,
             'image_id': img_data['image_id']
         }
