@@ -15,7 +15,7 @@ class InstanceHead(nn.Module):
         super().__init__()
         # Detectron 2 expect a dict of ShapeSpec object as input_shape
         input_shape = dict()
-        for name, shape in zip(cfg.MODEL.RPN.IN_FEATURES, [4, 16, 8, 32]):
+        for name, shape in zip(cfg.MODEL.RPN.IN_FEATURES, [4, 8, 16, 32]):
             input_shape[name] = ShapeSpec(channels=256, stride=shape)
 
         self.rpn = build_proposal_generator(cfg, input_shape=input_shape)

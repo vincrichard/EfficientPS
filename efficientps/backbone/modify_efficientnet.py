@@ -38,8 +38,8 @@ def generate_backbone_EfficientPS(cfg):
         backbone = EfficientNet.from_name(
             'efficientnet-b{}'.format(cfg.MODEL_CUSTOM.BACKBONE.EFFICIENTNET_ID))
 
-    backbone._bn0 = InPlaceABN(num_features=backbone._bn0.num_features)
-    backbone._bn1 = InPlaceABN(num_features=backbone._bn1.num_features)
+    backbone._bn0 = InPlaceABN(num_features=backbone._bn0.num_features, eps=0.001)
+    backbone._bn1 = InPlaceABN(num_features=backbone._bn1.num_features, eps=0.001)
     backbone._swish = nn.Identity()
     for i, block in enumerate(backbone._blocks):
         # Remove SE block
@@ -49,9 +49,9 @@ def generate_backbone_EfficientPS(cfg):
         block._se_expand = nn.Identity()
         # Replace BN with Inplace BN (default activation is leaky relu)
         if '_bn0' in [name for name, layer in block.named_children()]:
-            block._bn0 = InPlaceABN(num_features=block._bn0.num_features)
-        block._bn1 = InPlaceABN(num_features=block._bn1.num_features)
-        block._bn2 = InPlaceABN(num_features=block._bn2.num_features)
+            block._bn0 = InPlaceABN(num_features=block._bn0.num_features, eps=0.001)
+        block._bn1 = InPlaceABN(num_features=block._bn1.num_features, eps=0.001)
+        block._bn2 = InPlaceABN(num_features=block._bn2.num_features, eps=0.001)
 
         # Remove swish activation since Inplace BN contains the activation layer
         block._swish = nn.Identity()

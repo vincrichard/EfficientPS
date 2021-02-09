@@ -1,9 +1,10 @@
 import torch.nn as nn
-
+from inplace_abn import InPlaceABN
 class DepthwiseSeparableConv(nn.Module):
     """
     DepthwiseSeparableConv from MobileNet, code largely inspire from mmcv
     DepthwiseSeparableConvModule but simplify
+    TODO Improve the normalisation choices
     """
 
     def __init__(self,
@@ -27,6 +28,8 @@ class DepthwiseSeparableConv(nn.Module):
             groups=in_channels,
             **kwargs)
 
+        self.iabn = InPlaceABN(in_channels)
+
         self.pointwise_conv = nn.Conv2d(
             in_channels,
             out_channels,
@@ -35,5 +38,6 @@ class DepthwiseSeparableConv(nn.Module):
 
     def forward(self, x):
         x = self.depthwise_conv(x)
+        x = self.iabn(x)
         x = self.pointwise_conv(x)
         return x
