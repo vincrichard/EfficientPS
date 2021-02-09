@@ -18,6 +18,13 @@ To create this code I used multiple frameworks:
 - [COCO 2018 Panoptic Segmentation Task API (Beta version)](https://github.com/cocodataset/panopticapi) to compute panoptic quality metric
 
 
+## How to use
+
+- Install [pytorch](https://pytorch.org/)
+- Download Cityscape Dataset
+- Modify config.yaml
+- Run train_net.py
+
 ## Choice of implementation
 
 **1 - Original Configuration of the authors**
