@@ -22,8 +22,8 @@ To create this code I used multiple frameworks:
 
 - Install [pytorch](https://pytorch.org/)
 - Download Cityscape Dataset
-- Modify config.yaml
-- Run train_net.py
+- Modify `config.yaml`
+- Run `train_net.py`
 
 ## Choice of implementation
 
