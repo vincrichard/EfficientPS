@@ -1,0 +1,6 @@
+albumentations
+pytorch-lightning
+inplace-abn
+efficientnet_pytorch
+git+https://github.com/facebookresearch/detectron2.git
+git+https://github.com/cocodataset/panopticapi.git
