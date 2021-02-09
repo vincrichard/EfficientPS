@@ -83,3 +83,5 @@ All       |  45.4   75.4   57.9    19
 Things    |  34.4   73.3   46.6     8
 Stuff     |  53.4   76.9   66.0    11
 ```
+
+[Tensorboard of my best training](https://tensorboard.dev/experiment/6h8nsMW5Qw24MAW2h129sw/)
