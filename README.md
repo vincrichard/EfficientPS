@@ -40,7 +40,7 @@ Training config
 		- total epoch: 160
 ```
 
-**2 - Adapted configuration to my ressources**
+**2 - Adapted configuration to my resources**
 
 The authors trained their models using 16 NVIDIA Titan X GPUs. Due to the fact that I only had one GPU to train the model, I could not use the same configuration. Here is a summary of the necessary implementation decisions:
 
