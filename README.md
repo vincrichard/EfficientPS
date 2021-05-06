@@ -1,7 +1,7 @@
 # Efficient PS
 
 Disclaimer: This is a personal project, where I recorded Efficient PS in a month.
-Feel free to use my code. Note that the authors also shared there code.
+Feel free to use my code. Note that the authors also shared their code.
 
 
 Paper: [Efficient PS](http://panoptic.cs.uni-freiburg.de/#main)
