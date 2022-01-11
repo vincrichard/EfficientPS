@@ -52,7 +52,6 @@ TEST:
 # DATA
 # Path to cityscapes dataset
 DATASET_PATH: "/home/ubuntu/Elix/cityscapes"
-#DATASET_PATH: "/media/vincent/C0FC3B20FC3B0FE0/Elix/detectron2/datasets/cityscapes"
 TRAIN_JSON: "gtFine/cityscapes_panoptic_train.json"
 VALID_JSON: "gtFine/cityscapes_panoptic_val.json"
 PRED_DIR: "preds" # Path of images generated in the dataset folder
