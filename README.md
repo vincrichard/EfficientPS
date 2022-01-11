@@ -20,8 +20,42 @@ To create this code I used multiple frameworks:
 
 ## How to use
 
+- Download Cityscape Dataset:
+```
+git clone https://github.com/mcordts/cityscapesScripts.git
+# City scapes script
+pip install git+https://github.com/mcordts/cityscapesScripts.git
+# Panoptic
+CITYSCAPES_DATASET=/path/to/abovementioned/cityscapes python cityscapesscripts/preparation/createPanopticImgs.py
+```
 - Install [pytorch](https://pytorch.org/)
-- Download Cityscape Dataset
+```
+pip install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio===0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
+```
+- Install [Albumentation](https://albumentations.ai/)
+```
+pip install -U albumentations
+```
+- Install [Pytorch lighting](https://www.pytorchlightning.ai/)
+```
+pip install pytorch-lightning
+```
+- Install [Inplace batchnorm](https://github.com/mapillary/inplace_abn)
+```
+pip install inplace-abn
+```
+- Install [EfficientNet Pytorch](https://github.com/lukemelas/EfficientNet-PyTorch)
+```
+pip install efficientnet_pytorch
+```
+- Install [detecron 2 dependencies](https://github.com/facebookresearch/detectron2)
+```
+python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
+```
+- Install [Panoptic api](https://github.com/cocodataset/panopticapi)
+```
+pip install git+https://github.com/cocodataset/panopticapi.git
+```
 - Modify `config.yaml`
 - Run `train_net.py`
 
