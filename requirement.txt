@@ -1,5 +1,5 @@
 albumentations
-pytorch-lightning
+pytorch-lightning == 1.5.8
 inplace-abn
 efficientnet_pytorch
 git+https://github.com/facebookresearch/detectron2.git
