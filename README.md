@@ -1,6 +1,6 @@
 # Efficient PS
 
-Disclaimer: This is a personal project, where I recorded Efficient PS in a month.
+Disclaimer: This is a personal project, where I recoded Efficient PS in a month.
 Feel free to use my code. Note that the authors also shared their code.
 
 
